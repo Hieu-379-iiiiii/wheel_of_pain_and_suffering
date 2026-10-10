@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just... wheel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col overflow-hidden select-none">
+
+    <!-- App Header / Title Bar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div>
+                <h1 class="font-bold text-base tracking-tight text-white flex items-center gap-2">
+                    Just a wheel, but cool 
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="exportConfig()" title="Export Configuration" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 border border-slate-700 shadow-sm">
+                <i class="fa-solid fa-file-export"></i> Export
+            </button>
+            <label title="Import Configuration" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 border border-slate-700 shadow-sm cursor-pointer">
+                <i class="fa-solid fa-file-import"></i> Import
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importConfig(event)">
+            </label>
+            <button onclick="resetToDefaults()" title="Reset to default items" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 hover:text-rose-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5 border border-rose-800/50 shadow-sm">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Wheel & Main Action Area -->
+        <div class="flex-1 flex flex-col items-center justify-center relative p-6 bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 overflow-y-auto">
+            
+            <!-- Quick Stats & Status Bar -->
+            <div class="absolute top-4 left-6 right-6 flex items-center justify-between text-xs text-slate-400">
+                <div class="flex items-center gap-4 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800/80 shadow">
+                    <span>Active Items: <strong id="activeCount" class="text-indigo-400 font-semibold">0</strong></span>
+                    <span class="text-slate-600">|</span>
+                    <span>Remove on Win: <strong id="statusRemoveOnWin" class="text-emerald-400 font-semibold">Off</strong></span>
+                </div>
+                <div id="lastWinnerBadge" class="hidden bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2">
+                    Winner: <span id="winnerNameText" class="font-bold text-white"></span>
+                </div>
+            </div>
+
+            <!-- Wheel Container -->
+            <div class="relative flex items-center justify-center my-auto w-full max-w-[500px] aspect-square">
+                <!-- Outer Glow and Border Ring -->
+                <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500/20 via-purple-500/10 to-pink-500/20 blur-xl"></div>
+                <div class="absolute inset-[-12px] rounded-full border-4 border-slate-800/80 shadow-2xl bg-slate-900"></div>
+                
+                <!-- Wheel Pointer / Marker -->
+                <div class="absolute -top-6 left-1/2 -translate-x-1/2 z-30 wheel-pointer">
+                    <div class="pointer-shape w-10 h-12 bg-gradient-to-b from-amber-400 to-amber-600 clip-path-pointer flex items-end justify-center pb-1.5 shadow-md border-t border-amber-300" style="clip-path: polygon(50% 100%, 0% 0%, 100% 0%);">
+                        <div class="w-3 h-3 bg-amber-200 rounded-full shadow-inner mb-1"></div>
+                    </div>
+                </div>
+
+                <!-- Canvas for Spinning Wheel -->
+                <div class="relative w-full h-full rounded-full overflow-hidden shadow-2xl border-4 border-slate-700/60 bg-slate-900 cursor-pointer" onclick="spinWheel()">
+                    <canvas id="wheelCanvas" class="w-full h-full"></canvas>
+                    
+                    <!-- Center Spin Hub Button -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="wheel-hub w-20 h-20 rounded-full bg-gradient-to-tr from-slate-900 via-slate-800 to-indigo-950 border-4 border-amber-400/80 shadow-2xl flex items-center justify-center pointer-events-auto cursor-pointer relative" onclick="event.stopPropagation(); spinWheel();" title="Click to Spin!">
+                            <span class="font-extrabold text-sm tracking-wider text-amber-400 drop-shadow">SPIN</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Spin Controls Bar -->
+            <div class="mt-6 flex items-center gap-4">
+                <button id="spinBtn" onclick="spinWheel()" class="px-8 py-3.5 active:scale-95 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-3 text-base border border-indigo-400/30">
+                   Spin
+                </button>
+                <button onclick="openWinnerModal(null, true)" title="Pick Random Quickly" class="px-4 py-3.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-300 hover:text-white font-semibold rounded-2xl border border-slate-800 shadow transition flex items-center gap-2 text-sm">
+                Quick Pick
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Sidebar Panel: Config Tabs -->
+        <div class="w-[420px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 shadow-2xl">
+            
+            <!-- Tab Navigation Headers -->
+            <div class="flex border-b border-slate-800 bg-slate-950/50 p-2 gap-1 shrink-0">
+                <button onclick="switchTab('items')" id="tabBtn-items" class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
+                    <i class="fa-solid fa-list-ul"></i> Choices (<span id="tabItemCount">0</span>)
+                </button>
+                <button onclick="switchTab('settings')" id="tabBtn-settings" class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-sliders"></i> Settings
+                </button>
+                <button onclick="switchTab('history')" id="tabBtn-history" class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-clock-rotate-left"></i> History
+                </button>
+            </div>
+
+            <!-- Tab Content Body -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                
+                <!-- TAB 1: ITEMS MANAGEMENT -->
+                <div id="tab-items" class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Add New Choice</h2>
+                    </div>
+
+                    <!-- Single Add Input -->
+                    <div class="flex gap-2">
+                        <input type="text" id="newItemInput" placeholder="Enter choice name..." onkeydown="if(event.key==='Y'||event.key==='Enter') addItem()" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-inner">
+                        <button onclick="addItem()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-indigo-600/20 flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+
+                    <!-- Bulk Import Section -->
+                    <div class="pt-2">
+                        <details class="group bg-slate-950/60 border border-slate-800/80 rounded-xl overflow-hidden">
+                            <summary class="px-4 py-3 text-xs font-semibold text-slate-300 cursor-pointer flex items-center justify-between hover:bg-slate-800/40 transition">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-file-lines text-indigo-400"></i> Bulk Add / Paste List</span>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition"></i>
+                            </summary>
+                            <div class="p-3 pt-0 space-y-2 border-t border-slate-800/60">
+                                <textarea id="bulkInput" rows="3" placeholder="Paste items separated by commas or new lines..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"></textarea>
+                                <div class="flex justify-end gap-2">
+                                    <button onclick="bulkAddItems()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition shadow">Import Bulk</button>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- List Control Actions -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Wheel List</h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="shuffleItems()" title="Shuffle order" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition flex items-center gap-1">
+                                <i class="fa-solid fa-shuffle"></i> Shuffle
+                            </button>
+                            <button onclick="clearAllItems()" title="Clear all" class="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 rounded-lg text-xs transition flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Items Container List -->
+                    <div id="itemsListContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        <!-- Dynamically populated item cards -->
+                    </div>
+                </div>
+
+                <!-- TAB 2: WHEEL & APP SETTINGS -->
+                <div id="tab-settings" class="space-y-6 hidden">
+                    
+                    <!-- Spin Behavior -->
+                    <div class="space-y-3">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Spin Mechanics</h2>
+                        
+                        <!-- Toggle Remove on Win -->
+                        <div class="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Remove Winner on Spin</span>
+                                <span class="text-xs text-slate-400">Automatically delete winning choice after celebration</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggleRemoveOnWin" onchange="updateSettings()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- Toggle Sound Effects -->
+                        <div class="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Sound Effects</span>
+                                <span class="text-xs text-slate-400">Play audio ticks during rotation & win fanfare</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggleSound" checked onchange="updateSettings()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Speed & Duration Sliders -->
+                    <div class="space-y-4 pt-2 border-t border-slate-800/60">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Animation Timing</h2>
+
+                        <!-- Spin Duration Slider -->
+                        <div class="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl space-y-2">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="font-medium text-slate-200">Spin Duration</span>
+                                <span id="durationVal" class="text-indigo-400 font-bold">4.0s</span>
+                            </div>
+                            <input type="range" id="spinDurationRange" min="1" max="10" step="0.5" value="4" oninput="updateSettings()" class="w-full accent-indigo-500 bg-slate-800 rounded-lg appearance-none h-2 cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-slate-500">
+                                <span>Fast (1s)</span>
+                                <span>Balanced (4s)</span>
+                                <span>Epic (10s)</span>
+                            </div>
+                        </div>
+
+                        <!-- Spin Speed / Momentum Multiplier -->
+                        <div class="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl space-y-2">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="font-medium text-slate-200">Rotation Momentum</span>
+                                <span id="speedVal" class="text-indigo-400 font-bold">5x</span>
+                            </div>
+                            <input type="range" id="spinSpeedRange" min="2" max="12" step="1" value="5" oninput="updateSettings()" class="w-full accent-indigo-500 bg-slate-800 rounded-lg appearance-none h-2 cursor-pointer">
+                            <div class="flex justify-between text-[10px] text-slate-500">
+                                <span>Gentle (2x)</span>
+                                <span>Standard (5x)</span>
+                                <span>Furious (12x)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Color Theme Presets -->
+                    <div class="space-y-3 pt-2 border-t border-slate-800/60">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Color Palettes</h2>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setPalette('vibrant')" class="p-2 bg-slate-950 border border-indigo-500/50 rounded-xl text-xs font-medium text-indigo-300 hover:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                                <span class="w-3 h-3 rounded-full bg-gradient-to-r from-pink-500 to-indigo-500"></span> Vibrant
+                            </button>
+                            <button onclick="setPalette('pastel')" class="p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                                <span class="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-300 to-sky-300"></span> Pastel
+                            </button>
+                            <button onclick="setPalette('neon')" class="p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                                <span class="w-3 h-3 rounded-full bg-gradient-to-r from-lime-400 to-cyan-400"></span> Neon
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: HISTORY & RESULTS -->
+                <div id="tab-history" class="space-y-4 hidden">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Recent Spin Winners</h2>
+                        <button onclick="clearHistory()" class="text-xs text-rose-400 hover:text-rose-300 transition flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i> Clear Log
+                        </button>
+                    </div>
+
+                    <div id="historyListContainer" class="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                        <!-- Dynamically populated history entries -->
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="p-3 bg-slate-950 border-t border-slate-800/80 text-[11px] text-slate-500 flex items-center justify-between shrink-0">
+                <span class="flex items-center gap-1.5">Config auto-saved</span>
+                <span id="storageSizeInfo">LocalStorage active</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Winner Celebration Modal -->
+    <div id="winnerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300 text-center relative overflow-hidden">
+            <!-- Modal Background Glow -->
+            <div class="absolute -top-24 -left-24 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl"></div>
+
+            <div class="w-20 h-20 bg-gradient-to-tr from-amber-400 to-amber-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-amber-500/30 mb-6 border border-amber-300">
+                <i class="fa-solid fa-trophy text-white text-3xl"></i>
+            </div>
+
+            <span class="text-xs font-bold uppercase tracking-widest text-indigo-400 block mb-1">We Have a Winner!</span>
+            <h2 id="modalWinnerName" class="text-3xl font-extrabold text-white mb-6 break-words px-4"></h2>
+
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeWinnerModal(true)" class="flex-1 py-3 text-white font-semibold rounded-xl text-sm">
+                    Spin Again
+                </button>
+                <button onclick="closeWinnerModal(false)" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium rounded-xl transition text-sm border border-slate-700">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/script.js" defer></script>
+    <script src="./js/wheel.js" defer></script>
+    <script src="./js/app.js" defer></script>
+</body>
+</html>

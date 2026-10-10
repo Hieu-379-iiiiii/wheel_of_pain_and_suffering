@@ -1,0 +1,72 @@
+body {
+  font-family: sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e24;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+button,
+.wheel-hub,
+.wheel-pointer,
+.modal-dialog {
+  transition: background-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease !important;
+}
+
+button:hover,
+button:active,
+.wheel-hub:hover,
+.wheel-hub:active {
+  transform: none !important;
+}
+
+#lastWinnerBadge {
+  animation: none !important;
+}
+
+.wheel-pointer {
+  filter: drop-shadow(0 10px 16px rgba(15, 23, 42, 0.4));
+}
+
+.wheel-pointer .pointer-shape {
+  border-top: 1px solid rgba(251, 191, 36, 0.85);
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.2);
+}
+
+.wheel-hub {
+  transform: none !important;
+}
+
+.wheel-hub::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.2);
+}
+
+#winnerModal .modal-dialog {
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+#winnerModal:not(.hidden) .modal-dialog {
+  transform: scale(1);
+}
+
+#winnerModal.hidden .modal-dialog {
+  transform: scale(0.96);
+}
